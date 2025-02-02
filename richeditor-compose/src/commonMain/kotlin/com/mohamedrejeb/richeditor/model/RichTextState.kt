@@ -3086,11 +3086,14 @@ public class RichTextState internal constructor(
      *
      * @param text The text to update the [RichTextState] with.
      */
-    public fun setText(text: String): RichTextState {
+    public fun setText(
+        text: String,
+        selection: TextRange = TextRange(text.length),
+    ): RichTextState {
         val textFieldValue =
             TextFieldValue(
                 text = text,
-                selection = TextRange(text.length),
+                selection = selection,
             )
 
         onTextFieldValueChange(
