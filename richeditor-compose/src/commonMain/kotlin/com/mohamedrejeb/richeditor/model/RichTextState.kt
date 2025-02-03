@@ -304,19 +304,36 @@ public class RichTextState internal constructor(
         textRange: TextRange,
         text: String
     ) {
-        require(textRange.min >= 0) {
-            "The start index must be non-negative."
+        // Ensure that the start and end indices are within bounds
+        val start = textRange.min.coerceAtLeast(0) // Ensure the start is non-negative
+        val end = textRange.max.coerceAtMost(textFieldValue.text.length) // Ensure the end does not exceed text length
+
+        require(start <= end) {
+            "The start index ($start) must be less than or equal to the end index ($end)."
         }
 
-        require(textRange.max <= textFieldValue.text.length) {
-            "The end index must be within the text bounds. " +
-                    "The text length is ${textFieldValue.text.length}, " +
-                    "but the end index is ${textRange.max}."
-        }
+        // Perform the replacement with safe slicing
+        val beforeText = textFieldValue.text.safeSubstring(0, start)
+        val afterText = textFieldValue.text.safeSubstring(end)
+        val newText = beforeText + text + afterText
 
-        removeTextRange(textRange)
-        addTextAfterSelection(text = text)
+        onTextFieldValueChange(
+            newTextFieldValue = textFieldValue.copy(
+                text = newText,
+                selection = TextRange(start + text.length), // Set cursor to the end of the inserted text
+            )
+        )
     }
+
+    // A helper function to safely slice strings without throwing exceptions
+    private fun String.safeSubstring(startIndex: Int, endIndex: Int = this.length): String {
+        return if (startIndex in 0..this.length && endIndex in startIndex..this.length) {
+            this.substring(startIndex, endIndex)
+        } else {
+            "" // Return empty string if indices are out of bounds
+        }
+    }
+
 
     /**
      * Adds the provided text to the text field at the current selection.
@@ -1776,20 +1793,29 @@ public class RichTextState internal constructor(
                     (!config.preserveStyleOnEmptyLine || richSpan.paragraph.isEmpty()) &&
                     isSelectionAtNewRichSpan
                 ) {
-                    newParagraphFirstRichSpan.spanStyle = SpanStyle()
-                    newParagraphFirstRichSpan.richSpanStyle = RichSpanStyle.Default
+                    if (newParagraphFirstRichSpan != null) {
+                        newParagraphFirstRichSpan.spanStyle = SpanStyle()
+                    }
+                    if (newParagraphFirstRichSpan != null) {
+                        newParagraphFirstRichSpan.richSpanStyle = RichSpanStyle.Default
+                    }
                 } else if (
                     config.preserveStyleOnEmptyLine &&
                     isSelectionAtNewRichSpan
                 ) {
-                    newParagraphFirstRichSpan.spanStyle = currentSpanStyle
-                    newParagraphFirstRichSpan.richSpanStyle = currentRichSpanStyle
+                    if (newParagraphFirstRichSpan != null) {
+                        newParagraphFirstRichSpan.spanStyle = currentSpanStyle
+                    }
+                    if (newParagraphFirstRichSpan != null) {
+                        newParagraphFirstRichSpan.richSpanStyle = currentRichSpanStyle
+                    }
                 }
             }
 
             // Get the text before and after the slice index
-            val beforeText = tempTextFieldValue.text.substring(0, sliceIndex + 1)
-            val afterText = tempTextFieldValue.text.substring(sliceIndex + 1)
+            val safeSliceIndex = sliceIndex.coerceAtMost(tempTextFieldValue.text.length - 1)
+            val beforeText = tempTextFieldValue.text.substring(0, safeSliceIndex + 1)
+            val afterText = tempTextFieldValue.text.substring(safeSliceIndex + 1)
 
             // Update the text field value to include the new paragraph custom start text
             tempTextFieldValue = tempTextFieldValue.copy(
