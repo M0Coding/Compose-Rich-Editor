@@ -6,7 +6,7 @@ dokka = "2.0.0"
 
 ksoup = "0.5.0"
 jetbrainsMarkdown = "0.7.3"
-coil = "3.0.4"
+coil = "3.1.0"
 
 nexus-publish = "2.0.0"
 
